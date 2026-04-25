@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package order.v1;
+
+option go_package = "booknest-order-service/gen/order/v1;orderv1";
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  rpc ConfirmPayment(ConfirmPaymentRequest) returns (ConfirmPaymentResponse);
+}
+
+message OrderItem {
+  string book_id = 1;
+  int32 purchase_count = 2;
+  double purchase_price = 3;
+  double total_price = 4;
+}
+
+message CreateOrderRequest {
+  string user_id = 1;
+  string payment_method = 2;
+  repeated OrderItem items = 3;
+}
+
+message CreateOrderResponse {
+  string order_id = 1;
+  string order_number = 2;
+  string user_id = 3;
+  double total_price = 4;
+  string payment_status = 5;
+  string status = 6;
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+message GetOrderResponse {
+  string order_id = 1;
+  string order_number = 2;
+  string user_id = 3;
+  double total_price = 4;
+  string payment_status = 5;
+  string status = 6;
+  repeated OrderItem items = 7;
+}
+
+message ListOrdersRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListOrdersResponse {
+  repeated GetOrderResponse orders = 1;
+}
+
+message ConfirmPaymentRequest {
+  string user_id = 1;
+  string order_id = 2;
+  bool success = 3;
+}
+
+message ConfirmPaymentResponse {
+  string order_id = 1;
+  string payment_status = 2;
+  string status = 3;
+}

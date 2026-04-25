@@ -1,0 +1,25 @@
+services:
+  order-db:
+    image: postgres:15
+    container_name: booknest-order-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: booknest
+      POSTGRES_DB: booknest_orders
+    ports:
+      - "5433:5432"
+    volumes:
+      - order_postgres_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: booknest-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  order_postgres_data:
+  rabbitmq_data:
