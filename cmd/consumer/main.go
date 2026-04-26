@@ -1,24 +1,28 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 
 	"booknest-order-service/internal/app"
 	"booknest-order-service/internal/events"
+	"booknest-order-service/internal/logging"
 )
 
 func main() {
-	ctx, err := app.Bootstrap()
+	ctx, logger, err := app.Bootstrap()
 	if err != nil {
-		log.Fatalf("bootstrap failed: %v", err)
+		slog.Error("bootstrap failed", slog.Any("error", err))
+		return
 	}
+	logger = logging.WithComponent(logger, "consumer")
 
 	rabbitMQURL, err := app.RequireEnv("RABBITMQ_URL")
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("missing required environment variable", slog.Any("error", err))
+		return
 	}
 
-	if err := events.ConsumeOrderCreated(ctx, rabbitMQURL); err != nil {
-		log.Fatalf("consumer failed: %v", err)
+	if err := events.ConsumeOrderCreated(ctx, rabbitMQURL, logger); err != nil {
+		logger.Error("consumer failed", slog.Any("error", err))
 	}
 }

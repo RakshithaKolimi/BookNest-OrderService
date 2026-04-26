@@ -11,6 +11,14 @@ proto:
 		--go-grpc_opt=module=booknest-order-service \
 		$(PROTO_FILE)
 
+.PHONY: infra
+infra:
+	docker compose up -d order-db rabbitmq
+
 .PHONY: run
 run:
 	go run ./cmd/server
+
+.PHONY: consumer
+consumer:
+	go run ./cmd/consumer

@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -33,12 +33,18 @@ var errInvalidPaymentRequest = errors.New("invalid argument")
 type OrderService struct {
 	repo      domain.OrderRepository
 	publisher domain.EventPublisher
+	logger    *slog.Logger
 }
 
-func NewOrderService(repo domain.OrderRepository, publisher domain.EventPublisher) *OrderService {
+func NewOrderService(repo domain.OrderRepository, publisher domain.EventPublisher, logger *slog.Logger) *OrderService {
+	if logger == nil {
+		logger = slog.Default()
+	}
+
 	return &OrderService{
 		repo:      repo,
 		publisher: publisher,
+		logger:    logger,
 	}
 }
 
@@ -70,11 +76,20 @@ func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order, item
 
 	created, err := s.repo.CreateOrder(ctx, prepared.Order, items)
 	if err != nil {
+		s.logger.Error("failed to create order", slog.Any("error", err), slog.String("user_id", prepared.Order.UserID))
 		return domain.Order{}, err
 	}
 
+	s.logger.Info(
+		"order created",
+		slog.String("order_id", created.ID),
+		slog.String("order_number", created.OrderNumber),
+		slog.String("user_id", created.UserID),
+		slog.Int("item_count", len(items)),
+	)
+
 	if s.publisher != nil {
-		_ = s.publisher.PublishOrderCreated(ctx, events.OrderCreatedEvent{
+		event := events.OrderCreatedEvent{
 			EventID:     created.ID,
 			EventType:   events.EventOrderCreated,
 			OccurredAt:  created.CreatedAt,
@@ -82,10 +97,23 @@ func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order, item
 			OrderNumber: created.OrderNumber,
 			UserID:      created.UserID,
 			TotalPrice:  created.TotalPrice,
-		})
-	}
+		}
 
-	log.Printf("published order.created event for order ID: %s", created.ID)
+		if err := s.publisher.PublishOrderCreated(ctx, event); err != nil {
+			s.logger.Error(
+				"failed to publish order created event",
+				slog.Any("error", err),
+				slog.String("order_id", created.ID),
+				slog.String("event_type", event.EventType),
+			)
+		} else {
+			s.logger.Info(
+				"published order created event",
+				slog.String("order_id", created.ID),
+				slog.String("event_type", event.EventType),
+			)
+		}
+	}
 
 	return created, nil
 }
