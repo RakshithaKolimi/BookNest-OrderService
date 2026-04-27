@@ -1,0 +1,9 @@
+.git
+.github
+.env
+.env.*
+coverage.out
+docker-compose.yml
+docs
+tmp
+bin

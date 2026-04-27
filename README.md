@@ -84,6 +84,28 @@ docker compose up -d
 
 Apply migrations using your preferred migration tool, or manually run the SQL files in `migrations/`.
 
+## Docker image builds
+
+This repository now includes:
+
+- A multi-stage `Dockerfile` that can build either the gRPC server or the consumer
+- A GitHub Actions workflow at `.github/workflows/order-service-ci.yml`
+- Test execution via `go test ./...`
+- Docker image builds for `server` and `consumer` on pull requests
+- Image publishing to GitHub Container Registry (`ghcr.io`) on `main` and version tags
+
+Build the server image locally:
+
+```bash
+docker build -t booknest-order-service:server --build-arg SERVICE=server .
+```
+
+Build the consumer image locally:
+
+```bash
+docker build -t booknest-order-service:consumer --build-arg SERVICE=consumer .
+```
+
 ## What to build first
 
 Keep the first version intentionally small:
