@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"log/slog"
 
 	grpcserver "google.golang.org/grpc"
 	grpcstatus "google.golang.org/grpc/status"
@@ -34,6 +35,7 @@ func (s *Server) CreateOrder(ctx context.Context, req *orderv1.CreateOrderReques
 		return nil, grpcstatus.Errorf(mapErrorCode(err), "create order: %v", err)
 	}
 
+	slog.Info("handled CreateOrder RPC", "orderID", created.ID, "userID", created.UserID)
 	return mapCreateOrderResponse(created), nil
 }
 
@@ -47,6 +49,7 @@ func (s *Server) GetOrder(ctx context.Context, req *orderv1.GetOrderRequest) (*o
 		return nil, grpcstatus.Errorf(mapErrorCode(err), "get order: %v", err)
 	}
 
+	slog.Info("handled GetOrder RPC", "orderID", order.ID)
 	return mapGetOrderResponse(order, items), nil
 }
 
@@ -61,6 +64,7 @@ func (s *Server) ListOrders(ctx context.Context, req *orderv1.ListOrdersRequest)
 		return nil, grpcstatus.Errorf(mapErrorCode(err), "list orders: %v", err)
 	}
 
+	slog.Info("handled ListOrders RPC", "userID", userID, "count", len(orders))
 	return mapListOrdersResponse(orders), nil
 }
 
@@ -69,11 +73,54 @@ func (s *Server) ConfirmPayment(ctx context.Context, req *orderv1.ConfirmPayment
 	if err != nil {
 		return nil, err
 	}
-	
+
 	order, err := s.orderService.ConfirmPayment(ctx, userID, orderID, success)
 	if err != nil {
 		return nil, grpcstatus.Errorf(mapErrorCode(err), "confirm payment: %v", err)
 	}
 
+	slog.Info("handled ConfirmPayment RPC", "orderID", order.ID, "userID", userID, "success", success)
 	return mapConfirmPaymentResponse(order), nil
+}
+
+func (s *Server) CancelOrder(ctx context.Context, req *orderv1.CancelOrderRequest) (*orderv1.GetOrderResponse, error) {
+	userID, input, err := mapCancelOrderRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	order, err := s.orderService.CancelOrder(ctx, userID, input)
+	if err != nil {
+		return nil, grpcstatus.Errorf(mapErrorCode(err), "cancel order: %v", err)
+	}
+
+	slog.Info("handled CancelOrder RPC", "orderID", order.Order.ID, "userID", userID)
+	return mapGetOrderResponse(order.Order, order.Items), nil
+}
+
+func (s *Server) AdminUpdateOrderStatus(ctx context.Context, req *orderv1.AdminUpdateOrderStatusRequest) (*orderv1.GetOrderResponse, error) {
+	input, err := mapAdminUpdateOrderStatusRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	order, err := s.orderService.AdminUpdateOrderStatus(ctx, input)
+	if err != nil {
+		return nil, grpcstatus.Errorf(mapErrorCode(err), "admin update order status: %v", err)
+	}
+
+	slog.Info("handled AdminUpdateOrderStatus RPC", "orderID", order.Order.ID)
+	return mapGetOrderResponse(order.Order, order.Items), nil
+}
+
+func (s *Server) ListAllOrders(ctx context.Context, req *orderv1.ListAllOrdersRequest) (*orderv1.ListAllOrdersResponse, error) {
+	limit, offset := mapListAllOrdersRequest(req)
+
+	orders, err := s.orderService.ListAllOrders(ctx, limit, offset)
+	if err != nil {
+		return nil, grpcstatus.Errorf(mapErrorCode(err), "list all orders: %v", err)
+	}
+
+	slog.Info("handled ListAllOrders RPC", "count", len(orders))
+	return mapListAllOrdersResponse(orders), nil
 }

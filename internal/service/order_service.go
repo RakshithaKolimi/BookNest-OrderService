@@ -198,6 +198,7 @@ func (s *OrderService) CancelOrder(ctx context.Context, userID string, input dom
 		order.PaymentStatus = paymentRefundInit
 	}
 	order.Status = orderCancelledStatus
+	order.CancellationReason = strings.TrimSpace(input.CancellationReason)
 
 	updated, err := s.repo.UpdateOrder(ctx, order)
 	if err != nil {
@@ -230,6 +231,10 @@ func (s *OrderService) AdminUpdateOrderStatus(ctx context.Context, input domain.
 
 	if paymentStatus := strings.TrimSpace(input.PaymentStatus); paymentStatus != "" {
 		order.PaymentStatus = paymentStatus
+	}
+
+	if strings.TrimSpace(input.CancellationReason) != "" {
+		order.CancellationReason = strings.TrimSpace(input.CancellationReason)
 	}
 
 	updated, err := s.repo.UpdateOrder(ctx, order)

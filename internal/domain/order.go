@@ -3,15 +3,16 @@ package domain
 import "time"
 
 type Order struct {
-	ID            string
-	OrderNumber   string
-	UserID        string
-	TotalPrice    float64
-	PaymentMethod string
-	PaymentStatus string
-	Status        string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID                 string
+	OrderNumber        string
+	UserID             string
+	TotalPrice         float64
+	PaymentMethod      string
+	PaymentStatus      string
+	Status             string
+	CancellationReason string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 type OrderItem struct {

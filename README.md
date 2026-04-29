@@ -113,6 +113,29 @@ Keep the first version intentionally small:
 - `CreateOrder`
 - `GetOrder`
 - `ListOrders`
+- `CancelOrder`
+- `AdminUpdateOrderStatus`
+- `ListAllOrders`
 - Publish `OrderCreated`
 
 Do not start with distributed transactions, sagas, or multiple consumers. Keep the first iteration boring and observable.
+
+## Current gRPC contract
+
+The service currently exposes:
+
+- `CreateOrder`
+- `GetOrder`
+- `ListOrders`
+- `ConfirmPayment`
+- `CancelOrder`
+- `AdminUpdateOrderStatus`
+- `ListAllOrders`
+
+## Demo flow
+
+1. Start PostgreSQL and RabbitMQ with `docker compose up -d`.
+2. Apply the SQL migrations in `migrations/`, including `002_add_cancellation_reason`.
+3. Run the gRPC server with `go run ./cmd/server`.
+4. Enable microservice mode in `BookNest-Platform`.
+5. Place an order through the platform and watch the order service logs for the inbound RPC plus the `order.created` publish log.

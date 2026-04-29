@@ -9,6 +9,9 @@ service OrderService {
   rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
   rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
   rpc ConfirmPayment(ConfirmPaymentRequest) returns (ConfirmPaymentResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (GetOrderResponse);
+  rpc AdminUpdateOrderStatus(AdminUpdateOrderStatusRequest) returns (GetOrderResponse);
+  rpc ListAllOrders(ListAllOrdersRequest) returns (ListAllOrdersResponse);
 }
 
 message OrderItem {
@@ -45,6 +48,8 @@ message GetOrderResponse {
   string payment_status = 5;
   string status = 6;
   repeated OrderItem items = 7;
+  string payment_method = 8;
+  string cancellation_reason = 9;
 }
 
 message ListOrdersRequest {
@@ -67,4 +72,26 @@ message ConfirmPaymentResponse {
   string order_id = 1;
   string payment_status = 2;
   string status = 3;
+}
+
+message CancelOrderRequest {
+  string user_id = 1;
+  string order_id = 2;
+  string cancellation_reason = 3;
+}
+
+message AdminUpdateOrderStatusRequest {
+  string order_id = 1;
+  string status = 2;
+  string payment_status = 3;
+  string cancellation_reason = 4;
+}
+
+message ListAllOrdersRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message ListAllOrdersResponse {
+  repeated GetOrderResponse orders = 1;
 }

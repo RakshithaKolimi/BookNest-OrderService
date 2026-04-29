@@ -36,8 +36,9 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order domain.Order, i
 			total_price,
 			payment_method,
 			payment_status,
-			status
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			status,
+			cancellation_reason
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING created_at, updated_at;
 	`
 
@@ -51,6 +52,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order domain.Order, i
 		order.PaymentMethod,
 		order.PaymentStatus,
 		order.Status,
+		nullIfEmpty(order.CancellationReason),
 	).Scan(&order.CreatedAt, &order.UpdatedAt)
 	if err != nil {
 		return domain.Order{}, fmt.Errorf("insert order: %w", err)
@@ -97,6 +99,7 @@ func (r *OrderRepository) GetOrder(ctx context.Context, orderID string) (domain.
 			payment_method,
 			payment_status,
 			status,
+			COALESCE(cancellation_reason, ''),
 			created_at,
 			updated_at
 		FROM orders
@@ -112,6 +115,7 @@ func (r *OrderRepository) GetOrder(ctx context.Context, orderID string) (domain.
 		&order.PaymentMethod,
 		&order.PaymentStatus,
 		&order.Status,
+		&order.CancellationReason,
 		&order.CreatedAt,
 		&order.UpdatedAt,
 	)
@@ -133,6 +137,7 @@ func (r *OrderRepository) UpdateOrder(ctx context.Context, order domain.Order) (
 		SET
 			payment_status = $2,
 			status = $3,
+			cancellation_reason = $4,
 			updated_at = NOW()
 		WHERE id = $1
 		RETURNING
@@ -140,6 +145,7 @@ func (r *OrderRepository) UpdateOrder(ctx context.Context, order domain.Order) (
 			user_id,
 			total_price,
 			payment_method,
+			COALESCE(cancellation_reason, ''),
 			created_at,
 			updated_at;
 	`
@@ -150,11 +156,13 @@ func (r *OrderRepository) UpdateOrder(ctx context.Context, order domain.Order) (
 		order.ID,
 		order.PaymentStatus,
 		order.Status,
+		nullIfEmpty(order.CancellationReason),
 	).Scan(
 		&order.OrderNumber,
 		&order.UserID,
 		&order.TotalPrice,
 		&order.PaymentMethod,
+		&order.CancellationReason,
 		&order.CreatedAt,
 		&order.UpdatedAt,
 	)
@@ -175,6 +183,7 @@ func (r *OrderRepository) ListOrdersByUser(ctx context.Context, userID string, l
 			payment_method,
 			payment_status,
 			status,
+			COALESCE(cancellation_reason, ''),
 			created_at,
 			updated_at
 		FROM orders
@@ -200,6 +209,7 @@ func (r *OrderRepository) ListOrdersByUser(ctx context.Context, userID string, l
 			&order.PaymentMethod,
 			&order.PaymentStatus,
 			&order.Status,
+			&order.CancellationReason,
 			&order.CreatedAt,
 			&order.UpdatedAt,
 		); err != nil {
@@ -234,6 +244,7 @@ func (r *OrderRepository) ListOrders(ctx context.Context, limit, offset int32) (
 			payment_method,
 			payment_status,
 			status,
+			COALESCE(cancellation_reason, ''),
 			created_at,
 			updated_at
 		FROM orders
@@ -258,6 +269,7 @@ func (r *OrderRepository) ListOrders(ctx context.Context, limit, offset int32) (
 			&order.PaymentMethod,
 			&order.PaymentStatus,
 			&order.Status,
+			&order.CancellationReason,
 			&order.CreatedAt,
 			&order.UpdatedAt,
 		); err != nil {
@@ -322,4 +334,12 @@ func (r *OrderRepository) getOrderItems(ctx context.Context, orderID string) ([]
 	}
 
 	return items, nil
+}
+
+func nullIfEmpty(value string) any {
+	if value == "" {
+		return nil
+	}
+
+	return value
 }

@@ -101,13 +101,15 @@ func mapGetOrderResponse(order domain.Order, items []domain.OrderItem) *orderv1.
 	}
 
 	return &orderv1.GetOrderResponse{
-		OrderId:       order.ID,
-		OrderNumber:   order.OrderNumber,
-		UserId:        order.UserID,
-		TotalPrice:    order.TotalPrice,
-		PaymentStatus: order.PaymentStatus,
-		Status:        order.Status,
-		Items:         pbItems,
+		OrderId:            order.ID,
+		OrderNumber:        order.OrderNumber,
+		UserId:             order.UserID,
+		TotalPrice:         order.TotalPrice,
+		PaymentStatus:      order.PaymentStatus,
+		Status:             order.Status,
+		Items:              pbItems,
+		PaymentMethod:      order.PaymentMethod,
+		CancellationReason: order.CancellationReason,
 	}
 }
 
@@ -142,13 +144,13 @@ func mapListOrdersResponse(orders []domain.OrderWithItems) *orderv1.ListOrdersRe
 
 func mapConfirmPaymentRequest(req *orderv1.ConfirmPaymentRequest) (userID, orderID string, success bool, err error) {
 	if strings.TrimSpace(req.GetUserId()) == "" {
-		return "","",false, grpcstatus.Error(mapErrorCode(errInvalidArgument), "user_id is required")
+		return "", "", false, grpcstatus.Error(mapErrorCode(errInvalidArgument), "user_id is required")
 	}
 
 	if strings.TrimSpace(req.GetOrderId()) == "" {
-		return "","",false, grpcstatus.Error(mapErrorCode(errInvalidArgument), "order_id is required")
-	}			
-	
+		return "", "", false, grpcstatus.Error(mapErrorCode(errInvalidArgument), "order_id is required")
+	}
+
 	return req.GetUserId(), req.GetOrderId(), req.GetSuccess(), nil
 }
 
@@ -159,6 +161,70 @@ func mapConfirmPaymentResponse(order domain.Order) *orderv1.ConfirmPaymentRespon
 		Status:        order.Status,
 	}
 }
+
+func mapCancelOrderRequest(req *orderv1.CancelOrderRequest) (string, domain.OrderCancelInput, error) {
+	userID := strings.TrimSpace(req.GetUserId())
+	if userID == "" {
+		return "", domain.OrderCancelInput{}, grpcstatus.Error(mapErrorCode(errInvalidArgument), "user_id is required")
+	}
+
+	orderID := strings.TrimSpace(req.GetOrderId())
+	if orderID == "" {
+		return "", domain.OrderCancelInput{}, grpcstatus.Error(mapErrorCode(errInvalidArgument), "order_id is required")
+	}
+
+	reason := strings.TrimSpace(req.GetCancellationReason())
+	if reason == "" {
+		return "", domain.OrderCancelInput{}, grpcstatus.Error(mapErrorCode(errInvalidArgument), "cancellation_reason is required")
+	}
+
+	return userID, domain.OrderCancelInput{
+		OrderID:            orderID,
+		CancellationReason: reason,
+	}, nil
+}
+
+func mapAdminUpdateOrderStatusRequest(req *orderv1.AdminUpdateOrderStatusRequest) (domain.AdminOrderStatusUpdateInput, error) {
+	orderID := strings.TrimSpace(req.GetOrderId())
+	if orderID == "" {
+		return domain.AdminOrderStatusUpdateInput{}, grpcstatus.Error(mapErrorCode(errInvalidArgument), "order_id is required")
+	}
+
+	status := strings.TrimSpace(req.GetStatus())
+	paymentStatus := strings.TrimSpace(req.GetPaymentStatus())
+	reason := strings.TrimSpace(req.GetCancellationReason())
+
+	if status == "" && paymentStatus == "" {
+		return domain.AdminOrderStatusUpdateInput{}, grpcstatus.Error(mapErrorCode(errInvalidArgument), "status or payment_status is required")
+	}
+
+	return domain.AdminOrderStatusUpdateInput{
+		OrderID:            orderID,
+		Status:             status,
+		PaymentStatus:      paymentStatus,
+		CancellationReason: reason,
+	}, nil
+}
+
+func mapListAllOrdersRequest(req *orderv1.ListAllOrdersRequest) (limit, offset int32) {
+	limit = req.GetLimit()
+	if limit <= 0 {
+		limit = 10
+	}
+
+	offset = max(req.GetOffset(), 0)
+	return limit, offset
+}
+
+func mapListAllOrdersResponse(orders []domain.OrderWithItems) *orderv1.ListAllOrdersResponse {
+	pbOrders := make([]*orderv1.GetOrderResponse, 0, len(orders))
+	for _, order := range orders {
+		pbOrders = append(pbOrders, mapGetOrderResponse(order.Order, order.Items))
+	}
+
+	return &orderv1.ListAllOrdersResponse{Orders: pbOrders}
+}
+
 func newUUID() (string, error) {
 	var raw [16]byte
 	if _, err := rand.Read(raw[:]); err != nil {
